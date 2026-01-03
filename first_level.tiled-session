@@ -1,0 +1,43 @@
+{
+    "Map/SizeTest": {
+        "height": 4300,
+        "width": 2
+    },
+    "activeFile": "assets/first_level.tmx",
+    "expandedProjectPaths": [
+        ".",
+        "assets"
+    ],
+    "fileStates": {
+        ":/automap-tiles.tsx": {
+            "scaleInDock": 1
+        },
+        "assets/first_level.tmx": {
+            "scale": 1,
+            "selectedLayer": 2,
+            "viewCenter": {
+                "x": 158,
+                "y": 1072.5
+            }
+        },
+        "assets/platformer_base.tsx": {
+            "scaleInDock": 0.75,
+            "scaleInEditor": 1
+        }
+    },
+    "map.fixedSize": false,
+    "map.lastUsedFormat": "tmx",
+    "map.layerDataFormat": "3",
+    "map.tileHeight": 16,
+    "map.tileWidth": 16,
+    "openFiles": [
+        "assets/platformer_base.tsx",
+        "assets/first_level.tmx"
+    ],
+    "project": "first_level.tiled-project",
+    "recentFiles": [
+        "assets/platformer_base.tsx",
+        "assets/first_level.tmx"
+    ],
+    "resizeMap.removeObjects": false
+}
