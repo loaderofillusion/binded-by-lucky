@@ -1,10 +1,12 @@
 import arcade
 from arcade.camera import Camera2D
+from arcade.examples.camera_platform import TILE_SCALING
 from pyglet.graphics import Batch
 SCREEN_W = 1280
 SCREEN_H = 720
 TITLE = "Прыгскокология"
 MEMORY_TIME = 0.01
+TILE_SCALING = 1
 # Физика и движение
 GRAVITY = 1            # Пикс/с^2
 MOVE_SPEED_ACELERATION = 80  # Пикс/с
@@ -13,7 +15,7 @@ JUMP_SPEED = 15          # Начальный импульс прыжка, пи�
 LADDER_SPEED = 3
 GRAB_SPEED = 3
 DASH_SPEED = 15
-HORIZONTAL_GRAVITY = 80
+HORIZONTAL_GRAVITY = 25
 MAX_STAMINA = 10
 # Качество жизни прыжка
 COYOTE_TIME = 0.08        # Сколько после схода с платформы можно ещё прыгнуть
@@ -21,11 +23,10 @@ JUMP_BUFFER = 0.12
 MAX_JUMPS = 1             # С двойным прыжком всё лучше, но не сегодня
 MAX_DASH_TIME = 0.63
 MAX_DASHES = 1
-
 # Камера
 CAMERA_LERP = 0.12        # Плавность следования камеры
 WORLD_COLOR = arcade.color.SKY_BLUE
-class Main(arcade.Window):
+class GameView(arcade.Window):
     def __init__(self):
         super().__init__(SCREEN_W, SCREEN_H, TITLE, antialiasing=True)
         arcade.set_background_color(WORLD_COLOR)
@@ -42,6 +43,9 @@ class Main(arcade.Window):
         self.ladders = arcade.SpriteList()
         self.coins = arcade.SpriteList()
         self.hazards = arcade.SpriteList()  # Шипы/лава
+        self.inertion_platforms = arcade.SpriteList()
+        self.grab_list = arcade.SpriteList()
+
 
         # Игрок
         self.player = None
@@ -58,7 +62,6 @@ class Main(arcade.Window):
         self.time_since_ground = 999.0
         self.jumps_left = MAX_JUMPS
         self.dashes_left = MAX_DASHES
-        self.dash_time = MAX_DASH_TIME
         self.max_walk_speed = MOVE_MAX_SPEED
         self.dash_time = 0
         self.dashing = False
@@ -81,64 +84,35 @@ class Main(arcade.Window):
                                     scale=0.8)
         self.player.center_x, self.player.center_y = self.spawn_point
         self.player_list.append(self.player)
-
-
-        # --- Мир: сделаем крошечную арену руками ---
-        # Пол из «травы»
-        for x in range(0, 3200, 64):
-            tile = arcade.Sprite(":resources:images/tiles/grassMid.png", scale=0.5)
-            tile.center_x = x
-            tile.center_y = 64
-            self.walls.append(tile)
-
-        # Пара столбиков-стен
-        for y in range(64, 64 + 64 * 6, 64):
-            g = arcade.Sprite("Empty.png", scale=0.7)
-            g.center_x = 1600
-            g.center_y = y
-            s = arcade.Sprite(":resources:images/tiles/stoneCenter.png", 0.5)
-            s.center_x = 1600
-            s.center_y = y
-            self.walls.append(s)
-            self.grab_list.append(g)
-
-        # Лестница
-        for y in range(64, 64 + 64 * 4, 64):
-            l = arcade.Sprite(":resources:images/tiles/ladderMid.png", 0.5)
-            l.center_x = 1100
-            l.center_y = y
-            self.ladders.append(l)
-
-        # Двигающаяся платформа (влево-вправо)
         plat = arcade.Sprite(":resources:images/tiles/grassHalf_left.png", 0.5)
         plat.center_x = 400
-        plat.center_y = 500
-        # Говорим движку, куда платформе можно кататься
+        plat.center_y = 265
         plat.boundary_left = 300
         plat.boundary_right = 700
         plat.change_x = 5  # Поедем вправо
+        hitbox = arcade.Sprite("assets/Empty.png", 0.5)
+        hitbox.center_x = 395
+        hitbox.center_y = 285
+        hitbox.width = 110
+        hitbox.height = 30
+        self.inertion_platforms.append(hitbox)
         self.platforms.append(plat)
 
-        # Монетки
-        for x in (350, 450, 550, 650, 900, 950):
-            c = arcade.Sprite(":resources:images/items/coinGold.png", 0.5)
-            c.center_x = x
-            c.center_y = 340 if x < 700 else 140
-            self.coins.append(c)
 
-        # Шипы (притворимся лавой)
-        for x in range(1600, 2000, 64):
-            h = arcade.Sprite(":resources:images/tiles/spikes.png", 0.5)
-            h.center_x = x
-            h.center_y = 64
-            self.hazards.append(h)
+        # ===== ВОЛШЕБСТВО ЗАГРУЗКИ КАРТЫ! (Почти без магии.) =====
+        # Грузим тайловую карту
+        self.tile_map = arcade.load_tilemap('assets/first_level.tmx', scaling=TILE_SCALING)
+
+        # --- Достаём слои из карты как спрайт-листы ---
+        self.collisions = self.tile_map.sprite_lists["collision"]
+        self.wall_list = self.tile_map.sprite_lists["walls"]
+        self.grab_list = self.tile_map.sprite_lists["grab"]
 
         # --- Физический движок платформера ---
-        # Статичные — в walls, подвижные — в platforms, лестницы — ladders.
         self.engine = arcade.PhysicsEnginePlatformer(
             player_sprite=self.player,
             gravity_constant=GRAVITY,
-            walls=self.walls,
+            walls=self.collisions,
             platforms=self.platforms,
             ladders=self.ladders
         )
@@ -147,20 +121,24 @@ class Main(arcade.Window):
         self.jump_buffer_timer = 0
         self.time_since_ground = 999.0
         self.jumps_left = MAX_JUMPS
-        self.dash_time = 0
 
     def on_draw(self):
         self.clear()
 
         # --- Мир ---
         self.world_camera.use()
-        self.walls.draw()
-        self.grab_list.draw()
+        self.wall_list.draw()
         self.platforms.draw()
         self.ladders.draw()
         self.hazards.draw()
         self.coins.draw()
         self.player_list.draw()
+        #необязательно к отрисовке
+        '''
+        self.grab_list.draw()
+        self.inertion_platforms.draw()
+        '''
+
 
         # --- GUI ---
         self.gui_camera.use()
@@ -201,6 +179,9 @@ class Main(arcade.Window):
             self.grab_pressed = False
 
     def on_update(self, dt: float):
+        for i in range(len(self.platforms)):
+            self.inertion_platforms[i].change_x = self.platforms[i].change_x
+        self.inertion_platforms.update()
         move = 0
         if self.left and not self.right:
             move = -MOVE_SPEED_ACELERATION
@@ -222,25 +203,37 @@ class Main(arcade.Window):
         if self.max_walk_speed > self.player.change_x + move * dt > -self.max_walk_speed:
             self.player.change_x += move * dt
 
+
+
+
         # зацеп
-        grabable_walls = arcade.check_for_collision_with_list(self.player, self.grab_list)  # стены, за которые можно зацепиться
-        can_grab = self.stamina > 0 and (self.grab_pressed and grabable_walls)
+        grabable_walls = arcade.check_for_collision_with_list(self.player, self.grab_list)   # стены, за которые можно зацепиться
+        grabable_platforms = arcade.check_for_collision_with_list(self.player, self.inertion_platforms)
+        can_grab = self.stamina > 0 and self.grab_pressed and (grabable_walls or grabable_platforms)
         if can_grab:
+            if self.player.change_x == 15 or self.player.change_x == -15:
+                self.dash_time = MAX_DASH_TIME
+                self.dash_pressed = False
+            if grabable_platforms:
+                self.player.change_x = self.platforms[self.inertion_platforms.index(grabable_platforms[0])].change_x
+            else:
+                self.player.change_x = 0
             if self.up:
                 self.player.change_y = GRAB_SPEED + 1
             elif self.down:
                 self.player.change_y = -GRAB_SPEED + 1
             elif not self.down and not self.up:
                 self.player.change_y = 1
-            self.player.change_x = 0
+
             self.stamina -= dt
 
+
         if (self.dash_l_vector or self.dash_r_vector or self.dash_d_vector or self.dash_u_vector) and not (self.up or self.down or self.left or self.right) and self.dash_time == 0:
-            self.memory_time += dt
+            self.memory_time += dt # копим время жизни векторов
 
         if self.memory_time > MEMORY_TIME:
             self.dash_l_vector = self.dash_r_vector = self.dash_d_vector = self.dash_u_vector = False
-            self.memory_time = 0
+            self.memory_time = 0 # убиваем векторы и таймер
 
         # Лестницы имеют приоритет над гравитацией: висим/лезем
         on_ladder = self.engine.is_on_ladder()  # На лестнице?
@@ -262,7 +255,7 @@ class Main(arcade.Window):
             self.jumps_left = MAX_JUMPS
             self.dashes_left = MAX_DASHES
             self.stamina = MAX_STAMINA
-            if self.player_speed_x != 0 and not(self.right or self.left):
+            if (self.player_speed_x != 0 and not(self.right or self.left)) or (self.player.change_x > 20 and self.left) or (self.player.change_x < -20 and self.right):
                 self.player.change_x = 0
             elif self.player_speed_x > 10:
                 self.player.change_x -= HORIZONTAL_GRAVITY * dt * 0.8
@@ -280,6 +273,8 @@ class Main(arcade.Window):
 
         elif not grounded:
             self.time_since_ground += dt
+            if self.dash_time > MAX_DASH_TIME + 0.2:
+                self.dash_time = 0
             if self.dash_time == 0 and self.player_speed_x > 23:
                 self.player.change_x -= HORIZONTAL_GRAVITY * dt
             elif self.dash_time == 0 and self.player_speed_x < -23:
@@ -296,6 +291,7 @@ class Main(arcade.Window):
         want_jump = self.jump_pressed or (self.jump_buffer_timer > 0)
         want_dash = self.dash_pressed
         can_dash = self.dash_time < MAX_DASH_TIME and (self.dashes_left > 0)
+
         if want_dash and can_dash:
             self.memory_time = 0
             if self.dash_r_vector:
@@ -310,8 +306,6 @@ class Main(arcade.Window):
                 self.player.change_y = -DASH_SPEED
             else:
                 self.player.change_y = 1
-
-
             self.dash_time += dt
             if self.dash_time > MAX_DASH_TIME * 0.9:
                 self.dashes_left -= 1
@@ -320,31 +314,46 @@ class Main(arcade.Window):
                 self.player.change_x = 0
         if self.dash_time > 0:
             self.dash_time += dt
-
         # прыжок с зацепа/от стены
         if want_jump and  not self.grab_pressed and grabable_walls:
-            if not(self.right and self.left):
+            if self.dash_time > 0:
+                self.dash_pressed = False
+                self.player.change_y = DASH_SPEED * 2
+                if self.player.center_x < grabable_walls[0].center_x - grabable_walls[0].width * 0.1:
+                    self.player.change_x = -10
+                elif self.player.center_x > grabable_walls[0].center_x + grabable_walls[0].width * 0.1:
+                    self.player.change_x = 10
+
+            elif not(self.right and self.left):
                 self.jump_pressed = False
+                self.jump_buffer_timer = 0
                 self.grab_pressed = False
-                if self.player.center_x < grabable_walls[0].center_x:
+                if self.player.center_x < grabable_walls[0].center_x - grabable_walls[0].width * 0.1:
                     self.right = False
                     self.player.change_x = -5
-                elif self.player.center_x > grabable_walls[0].center_x:
+                elif self.player.center_x > grabable_walls[0].center_x + grabable_walls[0].width * 0.1:
                     self.left = False
                     self.player.change_x = 5
+                else:
+                    self.player.change_x += self.platforms[self.inertion_platforms.index(grabable_platforms[0])].change_x
                 self.player.change_y = 12
         elif self.grab_pressed and grabable_walls and want_jump:
             self.grab_pressed = False
             if self.player.center_x < grabable_walls[0].center_x:
                 self.right = False
-                self.player.change_x = -10
+                self.player.change_x += -10
             elif self.player.center_x > grabable_walls[0].center_x:
                 self.left = False
-                self.player.change_x = 10
-            self.player.change_y = 5
+                self.player.change_x += 10
+            self.player.change_y += 5
+        if grabable_platforms and want_jump:
+            self.player.change_x += self.platforms[self.inertion_platforms.index(grabable_platforms[0])].change_x
+
+
         # дефолтный прыжок и комбинация с рывком
         if want_jump and (grounded or self.time_since_ground <= COYOTE_TIME):
             self.jump_pressed = False
+            self.jump_buffer_timer = 0
             self.player.change_y = JUMP_SPEED
             self.jump_buffer_timer = 0
             if MAX_DASH_TIME > self.dash_time > 0:
@@ -354,12 +363,14 @@ class Main(arcade.Window):
                 self.player.change_x = self.player_speed_x * 1.5
                 self.dash_pressed = self.dash_u_vector = self.dash_d_vector = self.dash_l_vector = self.dash_r_vector = False
                 self.dash_time = 0
+                if grabable_platforms:
+                    self.player.change_x += self.platforms[
+                        self.inertion_platforms.index(grabable_platforms[0])].change_x
 
 
 
         # Обновляем физику — движок сам двинет игрока и платформы
         self.engine.update()
-
         # Собираем монетки и проверяем опасности
         for coin in arcade.check_for_collision_with_list(self.player, self.coins):
             coin.remove_from_sprite_lists()
@@ -383,25 +394,25 @@ class Main(arcade.Window):
         half_w = self.world_camera.viewport_width / 2
         half_h = self.world_camera.viewport_height / 2
         # Ограничим, чтобы за края уровня не выглядывало небо
-        world_w = 2000  # Мы руками построили пол до x = 2000
-        world_h = 900
-        cam_x = max(half_w, min(world_w - half_w, smooth[0]))
-        cam_y = max(half_h, min(world_h - half_h, smooth[1]))
+        self.world_w = int(self.tile_map.width * self.tile_map.tile_width * TILE_SCALING)
+        self.world_h = int(self.tile_map.height * self.tile_map.tile_height * TILE_SCALING)
+        cam_x = max(half_w, min(self.world_w - half_w, smooth[0]))
+        cam_y = max(half_h, min(self.world_h - half_h, smooth[1]))
 
         self.world_camera.position = (cam_x, cam_y)
         self.gui_camera.position = (SCREEN_W / 2, SCREEN_H / 2)
 
         # Обновим счёт
         self.text_score = arcade.Text(f"""Счёт: {self.score}
-                                            x_speed={self.player_speed_x}""",
+                                            speed={self.player_speed_x}""",
                                       16, SCREEN_H - 36, arcade.color.DARK_SLATE_GRAY,
                                       20, batch=self.batch)
-        self.info_text = arcade.Text(f"""grounded={grounded}  stamina={self.stamina}  dash_time={self.dash_time}""",
+        self.info_text = arcade.Text(f"""grounded={grounded}  stamina={self.stamina}  dashes={self.dashes_left}""",
                                      16, SCREEN_H - 72, arcade.color.DARK_SLATE_GRAY,
                                      20, batch=self.batch)
         self.player_speed_y, self.player_speed_x = self.player.change_y, self.player.change_x
 
 if __name__ == "__main__":
-    window = Main()
+    window = GameView()
     window.setup()
     arcade.run()
