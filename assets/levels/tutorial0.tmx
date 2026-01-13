@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="200" height="40" tilewidth="16" tileheight="16" infinite="0" nextlayerid="7" nextobjectid="1">
+ <tileset firstgid="1" source="../sprites/obstacles.tsx"/>
+ <layer id="1" name="walls" width="200" height="40">
+  <data encoding="base64" compression="zlib">
+   eJzt1jmOwkAQBdCOmlMycBeImIDlLpDPchcmHyCmEmeu0N2W9Z70g4rKarmkXwoAAAAAAAAAAAAAAACM29VS9rX3V8A8XeM2bu4DRt3jNv7cB4zSryCnX0FOv4KcfgU5/Qpy+hXk9CvI6VeQ068gp19BTr+CnH4FOf0KcvoV5PQryOlXzN06/s+PyCayrW3nw6qUz1W//UuamcYx3vYUOUcute083Eev/UuamcZXvO135CfyW9vOw3302r+kmWn8x9s+Is/Iq7adh/votX9JM0Brb8xDUyU=
+  </data>
+ </layer>
+ <layer id="2" name="collision" width="200" height="40">
+  <data encoding="base64" compression="zlib">
+   eJztwTEBAAAAwqD1T+1hDaAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAbn0AAAE=
+  </data>
+ </layer>
+ <layer id="3" name="dash" width="200" height="40">
+  <data encoding="base64" compression="zlib">
+   eJzt2jlOBDEQBVBHI81cguWqkLBcBxKW60DCcgR8AY+DRqWv9ntSBVYnFVTwv9StAQAAAADA/7o7tnbf56HP43H7G/bkpd/0a5+3Pu/H7W/Yk69+0999fvr8Hre/YU8uTq1d9rnqc33a/oY90T9gTP+AMf0DxvQPGNM/WNnNobXbw/h7df+Y7QOVnvotPp+5x+r+MdsHKn30W/w8c4/V/WO2D1Sa5Znq/iFfkWSWZ6r7h3xFklmeqe4f8hVJZnmmun/IVySZ5Znq/iFfkWSWZ6r7h3xFklmeqe4f8hVJZnmmun/IVySZ5Znq/iFfkcT/VzDm/ysYS8szafuwtrQ8k7YPa0vLM2n7sLa0PJO2D2tLyzNp+7C2tDyTtg9rS8szafuwtrQ8k7YPa0vLM2n7ACT7AwC0aQA=
+  </data>
+ </layer>
+ <layer id="4" name="crystals" width="200" height="40">
+  <data encoding="base64" compression="zlib">
+   eJztwTEBAAAAwqD1T+1hDaAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAbn0AAAE=
+  </data>
+ </layer>
+ <layer id="5" name="hazards" width="200" height="40">
+  <data encoding="base64" compression="zlib">
+   eJztwTEBAAAAwqD1T+1hDaAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAbn0AAAE=
+  </data>
+ </layer>
+ <layer id="6" name="grab" width="200" height="40">
+  <data encoding="base64" compression="zlib">
+   eJztwTEBAAAAwqD1T+1hDaAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAbn0AAAE=
+  </data>
+ </layer>
+</map>

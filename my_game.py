@@ -1,10 +1,81 @@
-from arcade import check_for_collision_with_list
-
-from pause import PauseView
 import arcade
+import random
+from arcade import check_for_collision_with_list
+from arcade.particles import FadeParticle, Emitter, EmitBurst, EmitInterval, EmitMaintainCount
+from pause import PauseView
+from win import WinView
 from arcade.camera import Camera2D
 from arcade.examples.camera_platform import TILE_SCALING
 from pyglet.graphics import Batch
+#частицы
+CRYSTAL_TEX = arcade.make_soft_circle_texture(20, arcade.color.GREEN, 255, 80)
+SMOKE_TEX = arcade.make_soft_circle_texture(20, arcade.color.LIGHT_GRAY, 255, 80)
+SPARK_TEX = [
+    arcade.make_soft_circle_texture(8, arcade.color.PASTEL_YELLOW),
+    arcade.make_soft_circle_texture(8, arcade.color.PEACH),
+    arcade.make_soft_circle_texture(8, arcade.color.BABY_BLUE),
+    arcade.make_soft_circle_texture(8, arcade.color.ELECTRIC_CRIMSON),
+]
+DEATH_TEX = arcade.make_soft_square_texture(10, arcade.color.RED_DEVIL, 255, 80)
+def smoke_mutator(p):  # Дым раздувается и плавно исчезает
+    p.scale_x *= 1.02
+    p.scale_y *= 1.02
+    p.alpha = max(0, p.alpha - 2)
+def death(attached_sprite):
+    return Emitter(
+        center_xy=(attached_sprite.center_x, attached_sprite.center_y),
+        emit_controller=EmitBurst(15),
+        particle_factory=lambda e: FadeParticle(
+            filename_or_texture=DEATH_TEX,
+            change_xy=arcade.math.rand_in_circle((0.0, 0.0), 5),
+            lifetime=random.uniform(0.5, 1),
+            start_alpha=200, end_alpha=0,
+            scale=random.uniform(0.6, 0.9),
+        ),
+    )
+def make_smoke_puff(attached_sprite):
+    # Короткий «пых» дыма: медленно плывёт и распухает
+    return Emitter(
+        center_xy=(attached_sprite.center_x, attached_sprite.center_y - 50),
+        emit_controller=EmitBurst(12),
+        particle_factory=lambda e: FadeParticle(
+            filename_or_texture=SMOKE_TEX,
+            change_xy=arcade.math.rand_in_circle((0.0, 0.4), 0.6),
+            lifetime=random.uniform(0.5, 1),
+            start_alpha=200, end_alpha=0,
+            scale=random.uniform(0.6, 0.9),
+            mutation_callback=smoke_mutator,
+        ),
+    )
+def break_crystal(attached_sprite):
+    # Короткий «пых» дыма: медленно плывёт и распухает
+    return Emitter(
+        center_xy=(attached_sprite.center_x, attached_sprite.center_y),
+        emit_controller=EmitBurst(15),
+        particle_factory=lambda e: FadeParticle(
+            filename_or_texture=CRYSTAL_TEX,
+            change_xy=arcade.math.rand_in_circle((0.0, 0.0), 0.6),
+            lifetime=random.uniform(0.5, 1),
+            start_alpha=200, end_alpha=0,
+            scale=random.uniform(0.6, 0.9),
+        ),
+    )
+
+def make_trail(attached_sprite, maintain=60):
+    # «След за объектом»: поддерживаем постоянное число частиц
+    emit = Emitter(
+        center_xy=(attached_sprite.center_x, attached_sprite.center_y),
+        emit_controller=EmitMaintainCount(maintain),
+        particle_factory=lambda e: FadeParticle(
+            filename_or_texture=random.choice(SPARK_TEX),
+            change_xy=arcade.math.rand_in_circle((0.0, 0.0), 1.6),
+            lifetime=random.uniform(0.35, 0.6),
+            start_alpha=220, end_alpha=0,
+            scale=random.uniform(0.25, 0.4),
+        ),
+    )
+    emit._attached = attached_sprite
+    return emit
 SCREEN_W = 1280
 SCREEN_H = 720
 TITLE = "Прыгскокология"
@@ -35,6 +106,10 @@ class GameView(arcade.View):
         self.tile_map = None
         arcade.set_background_color(WORLD_COLOR)
 
+        #частицы
+        self.emitters = []
+        self.trails = []
+
         # Камеры
         self.world_camera = Camera2D()
         self.gui_camera = Camera2D()
@@ -42,16 +117,18 @@ class GameView(arcade.View):
         # Списки спрайтов
         self.player_list = arcade.SpriteList()
         self.grab_list = arcade.SpriteList()
-        self.walls = arcade.SpriteList(use_spatial_hash=True)  # Очень много статичных — хэш спасёт вас
         self.platforms = arcade.SpriteList()  # Двигающиеся платформы
         self.ladders = arcade.SpriteList()
         self.coins = arcade.SpriteList()
         self.hazards = arcade.SpriteList()  # Шипы/лава
         self.inertion_platforms = arcade.SpriteList()
         self.grab_list = arcade.SpriteList()
-        self.dashing_platforms = arcade.SpriteList()
-        self.dashing_platforms = arcade.SpriteList(use_spatial_hash=True)
         self.crystal_list = arcade.SpriteList()
+        self.dash_zones = arcade.SpriteList(use_spatial_hash=True)
+        self.wall_list = arcade.SpriteList(use_spatial_hash=True)
+        self.collisions = arcade.SpriteList(use_spatial_hash=True)
+        self.exit = arcade.SpriteList()
+        # self.dashing_platforms = arcade.SpriteList(use_spatial_hash=True)
 
 
         # Игрок
@@ -64,6 +141,8 @@ class GameView(arcade.View):
         self.dash_zone_sound = arcade.load_sound("assets/sounds/dash_zone.wav")
         self.jump_sound = arcade.load_sound("assets/sounds/jump.wav")
         self.dash_zone_sound_flag = False
+        self.timer = 0
+        self.deaths = 0
         # Физика
         self.engine = None
 
@@ -102,14 +181,18 @@ class GameView(arcade.View):
         # ===== ВОЛШЕБСТВО ЗАГРУЗКИ КАРТЫ! (Почти без магии.) =====
         # Грузим тайловую карту
         self.tile_map = arcade.load_tilemap(f'assets/levels/{lvl_name}.tmx', scaling=TILE_SCALING)
-
+        self.level = lvl_name
         # --- Достаём слои из карты как спрайт-листы ---
-        self.collisions = self.tile_map.sprite_lists["collisions"]
-        self.wall_list = self.tile_map.sprite_lists["walls"]
+        for sprite in self.tile_map.sprite_lists["collisions"]:
+            self.collisions.append(sprite)
+        for sprite in self.tile_map.sprite_lists["walls"]:
+            self.wall_list.append(sprite)
         self.grab_list = self.tile_map.sprite_lists["grab"]
         self.hazards = self.tile_map.sprite_lists["hazards"]
-        self.dash_zones = self.tile_map.sprite_lists["dash"]
+        for sprite in self.tile_map.sprite_lists["dash"]:
+            self.dash_zones.append(sprite)
         self.crystal_list = self.tile_map.sprite_lists["crystals"]
+        self.exit = self.tile_map.sprite_lists["exit"]
 
         # --- Физический движок платформера ---
         self.engine = arcade.PhysicsEnginePlatformer(
@@ -137,6 +220,9 @@ class GameView(arcade.View):
         self.crystal_list.draw()
         self.dash_zones.draw()
         self.player_list.draw()
+        self.exit.draw()
+        for e in self.emitters:
+            e.draw()
         #необязательно к отрисовке
         '''
         self.grab_list.draw()
@@ -150,9 +236,9 @@ class GameView(arcade.View):
 
     def on_key_press(self, key, modifiers):
         if key == arcade.key.ESCAPE:
-            pause_view = PauseView(self)  #
+            pause_view = PauseView(self)
             self.window.show_view(pause_view)
-        if key in (arcade.key.LEFT, arcade.key.A):
+        elif key in (arcade.key.LEFT, arcade.key.A):
             self.left = True
         elif key in (arcade.key.RIGHT, arcade.key.D):
             self.right = True
@@ -214,6 +300,12 @@ class GameView(arcade.View):
         if self.max_walk_speed > self.player.change_x + move * dt > -self.max_walk_speed:
             self.player.change_x += move * dt
 
+        emitters_copy = self.emitters.copy()  # Защищаемся от мутаций списка
+        for e in emitters_copy:
+            e.update(dt)
+        for e in emitters_copy:
+            if e.can_reap():  # Готов к уборке?
+                self.emitters.remove(e)
 
 
 
@@ -265,6 +357,8 @@ class GameView(arcade.View):
         grounded = self.engine.can_jump(y_distance=6)  # Есть пол под ногами?
 
         if grounded:
+            if self.time_since_ground != 0:
+                self.emitters.append(make_smoke_puff(self.player))
             self.time_since_ground = 0
             self.jumps_left = MAX_JUMPS
             self.dashes_left = MAX_DASHES
@@ -305,6 +399,7 @@ class GameView(arcade.View):
                 crystal_sound.play()
                 self.dashes_left = MAX_DASHES
                 self.stamina = MAX_STAMINA
+                self.emitters.append(break_crystal(touched_crystals[0]))
                 self.crystal_list.remove(touched_crystals[0])
 
         # Учтём «запомненный» пробел
@@ -320,6 +415,9 @@ class GameView(arcade.View):
             if self.dash_r_vector == self.dash_l_vector == self.dash_d_vector == self.dash_u_vector == False:
                 self.dash_r_vector = True
             if in_dash_zone:
+                trail = make_trail(self.player)
+                self.trails.append(trail)
+                self.emitters.append(trail)
                 if not self.dash_zone_sound_flag:
                     self.dash_zone_sound_flag = True
                     self.dash_zone_player = self.dash_sound.play(loop=True)
@@ -341,6 +439,13 @@ class GameView(arcade.View):
                 self.player.change_y = 1
             self.dash_time += dt
             if self.dash_time > MAX_DASH_TIME * 0.9:
+                if self.trails:
+                    for p in self.trails:
+                        try:
+                            self.emitters.remove(p)
+                        except Exception:
+                            pass
+                    self.trails.clear()
                 self.dashing = False
                 if self.dash_save == False:
                     self.dashes_left -= 1
@@ -405,7 +510,15 @@ class GameView(arcade.View):
             if MAX_DASH_TIME > self.dash_time > 0:
                 self.dashing = False
                 self.dash_zone_sound_flag = False
-                arcade.stop_sound(self.dash_zone_player)
+                if in_dash_zone:
+                    if self.trails:
+                        for p in self.trails:
+                            try:
+                                self.emitters.remove(p)
+                            except Exception:
+                                pass
+                        self.trails.clear()
+                    arcade.stop_sound(self.dash_zone_player)
                 self.dashes_left -= 1
                 if MAX_DASH_TIME > self.dash_time > MAX_DASH_TIME * 0.5 or in_dash_zone:
                     self.dashes_left += 1
@@ -428,6 +541,8 @@ class GameView(arcade.View):
 
         if arcade.check_for_collision_with_list(self.player, self.hazards):
             # «Ау» -> респавн
+            self.deaths += 1
+            self.emitters.append(death(self.player))
             death_sound = arcade.load_sound("assets/sounds/death.wav")
             death_sound.play()
             self.player.center_x, self.player.center_y = self.spawn_point
@@ -436,6 +551,7 @@ class GameView(arcade.View):
             self.jumps_left = MAX_JUMPS
             self.dashes_left = MAX_DASHES
             self.dash_time = MAX_DASH_TIME
+        self.timer += dt
 
         # Камера — плавно к игроку и в рамках мира
         target = (self.player.center_x, self.player.center_y)
@@ -463,4 +579,12 @@ class GameView(arcade.View):
                                      16, SCREEN_H - 72, arcade.color.DARK_SLATE_GRAY,
                                      20, batch=self.batch)
         self.player_speed_y, self.player_speed_x = self.player.change_y, self.player.change_x
+        if arcade.check_for_collision_with_list(self.player, self.exit):
+            self.player.center_x, self.player.center_y = self.spawn_point
+            self.player.change_x = self.player.change_y = 0
+            win_view = WinView(self.deaths, self.timer, self.level)
+            self.window.show_view(win_view)
+
+
+
 
