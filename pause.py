@@ -16,7 +16,7 @@ class PauseView(arcade.View):
 
     def on_draw(self):
         self.clear()
-        self.batch.draw()
+        self.batch.draw()   
 
     def on_key_press(self, key, modifiers):
         from main import MenuView
