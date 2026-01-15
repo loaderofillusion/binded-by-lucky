@@ -3,17 +3,17 @@
  <tileset firstgid="1" source="../sprites/obstacles.tsx"/>
  <layer id="1" name="walls" width="200" height="40">
   <data encoding="base64" compression="zlib">
-   eJzt1jmOwkAQBdCOmlMycBeImIDlLpDPchcmHyCmEmeu0N2W9Z70g4rKarmkXwoAAAAAAAAAAAAAAACM29VS9rX3V8A8XeM2bu4DRt3jNv7cB4zSryCnX0FOv4KcfgU5/Qpy+hXk9CvI6VeQ068gp19BTr+CnH4FOf0KcvoV5PQryOlXzN06/s+PyCayrW3nw6qUz1W//UuamcYx3vYUOUcute083Eev/UuamcZXvO135CfyW9vOw3302r+kmWn8x9s+Is/Iq7adh/votX9JM0Brb8xDUyU=
+   eJzt1ilOAEEQBdBRfUuWu4BnuQt4lruAZ9GU6aQEcmb6i/eSEqXqp9PibxsAAAAAAAAAAAAAAAD872Zs2+1YnSInB3RP9SefA/5lSg7oPupPfgb8y5Qc0KX0mpQc0KX0mpQc0KX0mpQc0KX0mpQc0KX0mpQc0KX0mpQc0KX0mpQc0KX0mpQc0KX0mpQc0KX0mpQc0KX0mpQc0KX0mpQc0KX0mpQc0KX0mpQc0KX0mpQc0KX0mpQc5Lmof3FZc1VzPc7dZ69ZdX/uM8eq+3vsHOOu3va+5qHmcZy7z16z6v7cZ45V9/fYOcZLve1rzVvN+zh3n71m1f25zxyr7u+xc4yvetvvmp+a33HuPnvNqvtznzlW3d9jBzjbH6DqcEY=
   </data>
  </layer>
  <layer id="2" name="collision" width="200" height="40">
   <data encoding="base64" compression="zlib">
-   eJztwTEBAAAAwqD1T+1hDaAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAbn0AAAE=
+   eJztx7cNgEAABEFcR5iOMB1hquVa+Aw9M9IG2zQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADf0KYu9WnwxU/dxjSlOS2++Knbmra0p8MXP3U705Xu9PjiB/irF0bMYOE=
   </data>
  </layer>
  <layer id="3" name="dash" width="200" height="40">
   <data encoding="base64" compression="zlib">
-   eJzt2jlOBDEQBVBHI81cguWqkLBcBxKW60DCcgR8AY+DRqWv9ntSBVYnFVTwv9StAQAAAADA/7o7tnbf56HP43H7G/bkpd/0a5+3Pu/H7W/Yk69+0999fvr8Hre/YU8uTq1d9rnqc33a/oY90T9gTP+AMf0DxvQPGNM/WNnNobXbw/h7df+Y7QOVnvotPp+5x+r+MdsHKn30W/w8c4/V/WO2D1Sa5Znq/iFfkWSWZ6r7h3xFklmeqe4f8hVJZnmmun/IVySZ5Znq/iFfkWSWZ6r7h3xFklmeqe4f8hVJZnmmun/IVySZ5Znq/iFfkcT/VzDm/ysYS8szafuwtrQ8k7YPa0vLM2n7sLa0PJO2D2tLyzNp+7C2tDyTtg9rS8szafuwtrQ8k7YPa0vLM2n7ACT7AwC0aQA=
+   eJzt17cNAkAQRNFNjyYw3WI6wnSEKYFtYKJDQjq9J02w+Sa/CgAAAAAAfus4qk69c+8y5m9YybV/+ta79x5j/oaVPPunX7137zPmb1jJdlO16+17h838DSvRH5DpD8j0B2T6AzL9AZn+gEx/QKY/INMfkOkPyPQHZPoDMv0Bmf6ATH9Apj8g0x+Q6Q/I9AcAAAAAAAAAwP99Af8KJmY=
   </data>
  </layer>
  <layer id="4" name="crystals" width="200" height="40">
@@ -28,7 +28,7 @@
  </layer>
  <layer id="6" name="grab" width="200" height="40">
   <data encoding="base64" compression="zlib">
-   eJztwTEBAAAAwqD1T+1hDaAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAbn0AAAE=
+   eJzt1yEOgEAMRUHsErguXAmuBJdBLgn5CWpTMaMqKipq3jQBAAAAAAAAAAAAAADA19b6vLe8N1KVO+B4/eJZ5C+r3AHX6xfvIn9Z5Q5Y5j6vc94bqcodoD8g0x+Q6Q/I9Adk+gMy/QGZ/oBMf0CmPyDTH5DpD8j0B2T6AzL9AZn+AAAAAOCPB1wJIEw=
   </data>
  </layer>
 </map>

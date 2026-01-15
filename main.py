@@ -105,18 +105,23 @@ class StatView(arcade.View):
         time_best = list(map(lambda x: x[0], time_best))
         death_best = cur.execute(f'''SELECT death_best FROM info''').fetchall()
         death_best = list(map(lambda x: x[0], death_best))
-        for i in range(len(is_passed)):
+        for i in range(-1, len(is_passed)):
+            if i == -1:
+                stats_label = UILabel(
+                    text=f"         {'Статус':>55}{'Время':>35}{'Смерти':>25}{'Всего времени':>25}{'Всего смертей':>15}",
+                    font_size=20, text_color=arcade.color.WHITE,
+                    width=300, align="center")
             passed = 'Пройден'
             if is_passed[i] == 0:
                 passed = 'Не пройден'
             if i == 0:
                 stats_label = UILabel(
-                    text=f"Обучение: ({passed}) Время: {round(time_best[i], 3)} Смерти: {death_best[i]} Всего времени: {round(time_total[i], 3)} Всего смертей: {death_total[i]}",
+                    text=f"Обучение{passed:>30}{round(time_best[i], 3):>30}{death_best[i]:>30}{round(time_total[i], 3):>30}{death_total[i]:>30}",
                     font_size=20, text_color=arcade.color.WHITE,
-                    width=300, align="center")
-            else:
-                stats_label = UILabel(text=f"Уровень: {levels[i]}({passed}) Время: {round(time_best[i], 3)} Смерти: {death_best[i]} Всего времени: {round(time_total[i], 3)} Всего смертей: {death_total[i]}", font_size=20, text_color=arcade.color.WHITE,
-                            width=300, align="center")
+                    width=300, align="left")
+            elif i > 0:
+                stats_label = UILabel(text=f"Уровень{levels[i]:}{passed:>30}{round(time_best[i], 3):>30}{death_best[i]:>30}{round(time_total[i], 3):>30}{death_total[i]:>30}", font_size=20, text_color=arcade.color.WHITE,
+                            width=300, align="left")
             self.box_layout.add(stats_label)
 
         btn_menu = UIFlatButton(text="Меню", width=200, height=50)

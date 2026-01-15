@@ -2,7 +2,7 @@ import arcade
 import random
 from arcade import check_for_collision_with_list
 from arcade.particles import FadeParticle, Emitter, EmitBurst, EmitInterval, EmitMaintainCount
-from pause import PauseView
+from game_pause import PauseView
 from win import WinView
 from arcade.camera import Camera2D
 from arcade.examples.camera_platform import TILE_SCALING
