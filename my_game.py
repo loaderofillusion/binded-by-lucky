@@ -89,6 +89,7 @@ JUMP_SPEED = 15          # Начальный импульс прыжка, пи�
 LADDER_SPEED = 3
 GRAB_SPEED = 3
 DASH_SPEED = 15
+AIR_SPEED = 15
 HORIZONTAL_GRAVITY = 25
 MAX_STAMINA = 10
 # Качество жизни прыжка
@@ -97,6 +98,7 @@ JUMP_BUFFER = 0.12
 MAX_JUMPS = 1             # С двойным прыжком всё лучше, но не сегодня
 MAX_DASH_TIME = 0.63
 MAX_DASHES = 1
+CRYSTAL_REVIEW = 4
 # Камера
 CAMERA_LERP = 0.12        # Плавность следования камеры
 WORLD_COLOR = arcade.color.SKY_BLUE
@@ -143,6 +145,7 @@ class GameView(arcade.View):
         self.dash_zone_sound_flag = False
         self.timer = 0
         self.deaths = 0
+        self.pr_center_x = 0
         # Физика
         self.engine = None
 
@@ -192,6 +195,7 @@ class GameView(arcade.View):
         for sprite in self.tile_map.sprite_lists["dash"]:
             self.dash_zones.append(sprite)
         self.crystal_list = self.tile_map.sprite_lists["crystals"]
+        self.crystal_list_copy = list(self.crystal_list)
         self.exit = self.tile_map.sprite_lists["exit"]
 
         # --- Физический движок платформера ---
@@ -207,6 +211,7 @@ class GameView(arcade.View):
         self.jump_buffer_timer = 0
         self.time_since_ground = 999.0
         self.jumps_left = MAX_JUMPS
+        self.crystal_timer = CRYSTAL_REVIEW
     def on_draw(self):
         self.clear()
 
@@ -276,6 +281,28 @@ class GameView(arcade.View):
             arcade.stop_sound(self.grab_sound_player)
 
     def on_update(self, dt: float):
+
+        # кристаллы
+
+        self.crystal_timer -= dt
+        if self.crystal_timer <= 0:
+            self.crystal_timer = CRYSTAL_REVIEW
+            for cryst in self.crystal_list_copy:
+                try:
+                    self.crystal_list.append(cryst)
+                except Exception:
+                    pass
+        touched_crystals = check_for_collision_with_list(self.player, self.crystal_list)
+        if touched_crystals and (self.stamina < 10 or self.dashes_left < MAX_DASHES):
+            crystal_sound = arcade.load_sound("assets/sounds/crystal.wav")
+            crystal_sound.play()
+            self.dashes_left = MAX_DASHES
+            self.stamina = MAX_STAMINA
+            self.emitters.append(break_crystal(touched_crystals[0]))
+            self.crystal_list.remove(touched_crystals[0])
+            self.dash_r_vector = self.dash_l_vector = self.dash_d_vector = self.dash_u_vector = False
+            self.dash_time = 0
+        grounded = self.engine.can_jump(y_distance=6)
         for i in range(len(self.platforms)):
             self.inertion_platforms[i].change_x = self.platforms[i].change_x
         self.inertion_platforms.update()
@@ -312,6 +339,7 @@ class GameView(arcade.View):
         # зацеп
         grabable_walls = arcade.check_for_collision_with_list(self.player, self.grab_list)   # стены, за которые можно зацепиться
         grabable_platforms = arcade.check_for_collision_with_list(self.player, self.inertion_platforms)
+
         can_grab = self.stamina > 0 and self.grab_pressed and (grabable_walls or grabable_platforms)
         if can_grab:
             if self.player.change_x == 15 or self.player.change_x == -15:
@@ -353,8 +381,6 @@ class GameView(arcade.View):
             else:
                 self.player.change_y = 0
 
-        # Если не на лестнице — работает обычная гравитация движка
-        grounded = self.engine.can_jump(y_distance=6)  # Есть пол под ногами?
 
         if grounded:
             if self.time_since_ground != 0:
@@ -392,15 +418,8 @@ class GameView(arcade.View):
             elif self.left and self.player_speed_x > 10:
                 self.player.change_x -= HORIZONTAL_GRAVITY * dt
 
-            # кристаллы
-            touched_crystals = check_for_collision_with_list(self.player, self.crystal_list)
-            if touched_crystals and (self.stamina < 10 or self.dashes_left < MAX_DASHES):
-                crystal_sound = arcade.load_sound("assets/sounds/crystal.wav")
-                crystal_sound.play()
-                self.dashes_left = MAX_DASHES
-                self.stamina = MAX_STAMINA
-                self.emitters.append(break_crystal(touched_crystals[0]))
-                self.crystal_list.remove(touched_crystals[0])
+
+
 
         # Учтём «запомненный» пробел
         if self.jump_buffer_timer > 0:
@@ -440,11 +459,7 @@ class GameView(arcade.View):
             self.dash_time += dt
             if self.dash_time > MAX_DASH_TIME * 0.9:
                 if self.trails:
-                    for p in self.trails:
-                        try:
-                            self.emitters.remove(p)
-                        except Exception:
-                            pass
+                    self.emitters.clear()
                     self.trails.clear()
                 self.dashing = False
                 if self.dash_save == False:
@@ -540,7 +555,7 @@ class GameView(arcade.View):
             self.score += 1
 
         if arcade.check_for_collision_with_list(self.player, self.hazards):
-            # «Ау» -> респавн
+
             self.deaths += 1
             self.emitters.append(death(self.player))
             death_sound = arcade.load_sound("assets/sounds/death.wav")
@@ -565,17 +580,17 @@ class GameView(arcade.View):
         self.world_w = int(self.tile_map.width * self.tile_map.tile_width * TILE_SCALING)
         self.world_h = int(self.tile_map.height * self.tile_map.tile_height * TILE_SCALING)
         cam_x = max(half_w, min(self.world_w - half_w, smooth[0]))
-        cam_y = max(half_h, min(self.world_h - half_h, smooth[1]))
+        cam_y = max(half_h + 10, min(self.world_h - half_h, smooth[1] + 10))
 
         self.world_camera.position = (cam_x, cam_y)
         self.gui_camera.position = (SCREEN_W / 2, SCREEN_H / 2)
 
         # Обновим счёт
-        self.text_score = arcade.Text(f"""Счёт: {self.score}
-                                            speed={self.player_speed_y}""",
+        self.text_score = arcade.Text(f"""Счёт: {67}
+                                            speed={self.player_speed_x}""",
                                       16, SCREEN_H - 36, arcade.color.DARK_SLATE_GRAY,
                                       20, batch=self.batch)
-        self.info_text = arcade.Text(f"""jumps={self.jumps_left}  flag={self.dash_zone_sound_flag}  dashes={self.dashes_left}""",
+        self.info_text = arcade.Text(f"""q""",
                                      16, SCREEN_H - 72, arcade.color.DARK_SLATE_GRAY,
                                      20, batch=self.batch)
         self.player_speed_y, self.player_speed_x = self.player.change_y, self.player.change_x
@@ -584,7 +599,10 @@ class GameView(arcade.View):
             self.player.change_x = self.player.change_y = 0
             win_view = WinView(self.deaths, self.timer, self.level)
             self.window.show_view(win_view)
-
+        self.pr_center_x = self.player.center_x
+        if grabable_walls and self.player.change_x != 0:
+            if self.player.center_x == self.pr_center_x:
+                self.player.change_x = 0
 
 
 

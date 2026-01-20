@@ -20,11 +20,11 @@ class MenuView(arcade.View):
         self.manager.clear()
         self.box_layout.clear()  # Очищаем box_layout
 
-        label = UILabel(text="Binded by lucky", font_size=20, text_color=arcade.color.WHITE,
+        label = UILabel(text="Binded by lucky", font_size=100, text_color=arcade.color.WHITE,
                         width=300, align="center")
         self.box_layout.add(label)
 
-        label = UILabel(text="Меню", font_size=20, text_color=arcade.color.WHITE,
+        label = UILabel(text="Меню", font_size=40, text_color=arcade.color.WHITE,
                         width=300, align="center")
         self.box_layout.add(label)
 
@@ -44,7 +44,7 @@ class MenuView(arcade.View):
         self.manager.add(self.anchor_layout)
 
     def on_show_view(self):
-        arcade.set_background_color(arcade.color.GRAY)
+        arcade.set_background_color(arcade.color.MODE_BEIGE)
         self.manager.enable()
 
     def on_hide_view(self):
