@@ -481,6 +481,7 @@ class GameView(arcade.View):
                 self.dashing = False
                 self.dash_pressed = False
                 self.player.change_y = DASH_SPEED * 2
+                self.dash_r_vector = self.dash_u_vector = self.dash_d_vector = self.dash_l_vector = False
                 if self.player.center_x < grabable_walls[0].center_x - grabable_walls[0].width * 0.1:
                     self.player.change_x = -10
                 elif self.player.center_x > grabable_walls[0].center_x + grabable_walls[0].width * 0.1:
