@@ -1,9 +1,7 @@
 import arcade
-from pyglet.graphics import Batch
-from arcade.gui import UIManager, UIFlatButton, UITextureButton, UILabel, UIInputText, UITextArea, UISlider, UIDropdown, \
-    UIMessageBox  # Это разные виджеты
-from arcade.gui.widgets.layout import UIAnchorLayout, UIBoxLayout  # А это менеджеры компоновки, как в pyQT
 import sqlite3
+from arcade.gui import UIManager, UIFlatButton, UILabel
+from arcade.gui.widgets.layout import UIAnchorLayout, UIBoxLayout
 
 class WinView(arcade.View):
     def __init__(self, deaths, time, level):

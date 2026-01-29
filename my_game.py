@@ -1,13 +1,13 @@
 import arcade
 import random
-from arcade import check_for_collision_with_list
-from arcade.particles import FadeParticle, Emitter, EmitBurst, EmitInterval, EmitMaintainCount
-from game_pause import PauseView
 from win import WinView
+from pyglet.graphics import Batch
+from arcade import check_for_collision_with_list
+from arcade.particles import FadeParticle, Emitter, EmitBurst, EmitMaintainCount
+from game_pause import PauseView
 from arcade.camera import Camera2D
 from arcade.examples.camera_platform import TILE_SCALING
-from pyglet.graphics import Batch
-#частицы
+# частицы
 CRYSTAL_TEX = arcade.make_soft_circle_texture(20, arcade.color.GREEN, 255, 80)
 SMOKE_TEX = arcade.make_soft_circle_texture(20, arcade.color.LIGHT_GRAY, 255, 80)
 SPARK_TEX = [
@@ -581,19 +581,21 @@ class GameView(arcade.View):
         self.world_w = int(self.tile_map.width * self.tile_map.tile_width * TILE_SCALING)
         self.world_h = int(self.tile_map.height * self.tile_map.tile_height * TILE_SCALING)
         cam_x = max(half_w, min(self.world_w - half_w, smooth[0]))
-        cam_y = max(half_h + 10, min(self.world_h - half_h, smooth[1] + 10))
+        if self.player.change_y < -7 and self.player.center_y > half_h:
+            cam_y = min(max(half_h - 15, min(self.world_h - half_h, smooth[1] + 10)), self.player.center_y)
+        else:
+            cam_y = max(half_h + 15, min(self.world_h - half_h, smooth[1] + 10))
+
 
         self.world_camera.position = (cam_x, cam_y)
         self.gui_camera.position = (SCREEN_W / 2, SCREEN_H / 2)
 
         # Обновим счёт
-        self.text_score = arcade.Text(f"""Счёт: {67}
-                                            speed={self.player_speed_x}""",
+        self.text_score = arcade.Text(f"""Смерти: {self.deaths - 1}
+                                            Время: {round(self.timer, 3)}""",
                                       16, SCREEN_H - 36, arcade.color.DARK_SLATE_GRAY,
                                       20, batch=self.batch)
-        self.info_text = arcade.Text(f"""q""",
-                                     16, SCREEN_H - 72, arcade.color.DARK_SLATE_GRAY,
-                                     20, batch=self.batch)
+
         self.player_speed_y, self.player_speed_x = self.player.change_y, self.player.change_x
         if arcade.check_for_collision_with_list(self.player, self.exit):
             self.player.center_x, self.player.center_y = self.spawn_point

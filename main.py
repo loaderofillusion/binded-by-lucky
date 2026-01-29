@@ -3,8 +3,6 @@ import arcade
 from arcade.gui import UIManager, UIFlatButton, UILabel, UIDropdown
 from arcade.gui.widgets.layout import UIAnchorLayout, UIBoxLayout
 import sqlite3
-SCREEN_W = 1280
-SCREEN_H = 720
 
 
 class MenuView(arcade.View):
@@ -78,6 +76,9 @@ class StatView(arcade.View):
         self.anchor_layout = UIAnchorLayout()
         self.box_layout = UIBoxLayout(vertical=True, space_between=10)
         self.setup_widgets()
+        self.window.set_fullscreen(True)  # Включаем fullscreen
+        width, height = self.window.get_size()
+        self.window.set_viewport(0, width, 0, height)
 
     def setup_widgets(self):
         self.manager.clear()
@@ -160,7 +161,7 @@ class StatView(arcade.View):
 
 
 if __name__ == "__main__":
-    window = arcade.Window(SCREEN_W, SCREEN_H, "Меню")
+    window = arcade.Window(fullscreen=True)
     menu_view = MenuView()
     window.show_view(menu_view)
     arcade.run()
